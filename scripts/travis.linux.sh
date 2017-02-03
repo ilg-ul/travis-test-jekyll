@@ -24,7 +24,7 @@ slug="${build}/${TRAVIS_REPO_SLUG}"
 
 # -----------------------------------------------------------------------------
 
-site="${HOME}/${GITHUB_DEST_REPO}"
+site="${HOME}/out/${GITHUB_DEST_REPO}"
 
 # -----------------------------------------------------------------------------
 
@@ -33,80 +33,82 @@ site="${HOME}/${GITHUB_DEST_REPO}"
 
 function do_before_install() {
 
+  echo "Before install, bring extra tools..."
+
   cd "${HOME}"
-  # tree
-  ls -lL "${slug}"
 
   # gem install html-proofer
   # htmlproofer --version
-
-  # bundle update
 
   return 0
 }
 
 function do_before_script() {
 
+  echo "Before starting the test, clone the destination repo..."
+
   cd "${HOME}"
-  ls -lL "${slug}"
 
-  git config --global user.email "ilg@livius.net"
-  git config --global user.name "Liviu Ionescu (Travis CI)"
+  git config --global user.email "${GIT_COMMIT_USER_EMAIL}"
+  git config --global user.name "${GIT_COMMIT_USER_NAME}"
 
-  git clone --branch=master https://github.com/${GITHUB_DEST_REPO}.git ${GITHUB_DEST_REPO}
+  git clone --branch=master https://github.com/${GITHUB_DEST_REPO}.git "${site}"
 
   return 0
 }
 
 function do_script() {
 
+  echo "The main test code; perform the Jekyll build..."
+
   cd "${slug}"
-  ls -lL
 
-  bundle exec jekyll build --destination ${site}
-  # bundle exec htmlproofer ${site}
+  # Be sure the 'vendor/' folder is excluded, otherwise a strage error occurs.
+  bundle exec jekyll build --destination "${site}"
 
-  cd "${site}"
-
-  git add --all .
-  git commit -m "Deploy to Github Pages"
-
-  git status
-
-  git push --force --quiet "https://${GITHUB_TOKEN}@github.com/${GITHUB_DEST_REPO}" master
-
-  if [ "${TRAVIS_BRANCH}" != "master" ]; then exit 0; fi
+  # bundle exec htmlproofer "${site}"
 
   return 0
 }
 
-
 function do_after_success() {
+
+  echo "After success, deploy to GitHub pages..."
+
+  if [ "${TRAVIS_BRANCH}" != "master" ]; 
+  then 
+    echo "Not on master branch, skip deploy."
+    return 0; 
+  fi
 
   cd "${site}"
 
   git add --all .
   git commit -m "Deploy to Github Pages"
 
-  git status
+  # git status
 
-  git push --force --quiet "https://${GITHUB_TOKEN}@$github.com/${GITHUB_DEST_REPO}" master
+  # Must be quiet and have no output, to not reveal the key.
+  git push --force --quiet "https://${GITHUB_TOKEN}@github.com/${GITHUB_DEST_REPO}" master > /dev/null 2>&1
 
   return 0
 }
 
 function do_after_failure() {
 
+  echo "Nothing to do after failure..."
   return 0
 }
 
 function do_deploy() {
 
+  echo "Nothing to do to deploy..."
   return 0
 }
 
 function do_after_script() {
 
+  echo "Nothing to do after script..."
   return 0
 }
 
